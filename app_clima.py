@@ -88,12 +88,29 @@ if 'dados_locais' not in st.session_state:
 
 if 'perguntas' not in st.session_state:
     st.session_state.perguntas = pd.DataFrame({
-        "Ativa": [True, True, True, True],
-        "Pilar Estratégico": ["Liderança", "Comunicação", "Reconhecimento", "eNPS"],
+        "Ativa": [True, True, True, True, True, True, True, True, True, True],
+        "Pilar Estratégico": [
+            "Liderança", 
+            "Comunicação", 
+            "Reconhecimento", 
+            "Segurança Psicológica", 
+            "Bem-estar & Saúde Mental", 
+            "Diversidade & Inclusão", 
+            "Propósito & Alinhamento", 
+            "Desenvolvimento", 
+            "Infraestrutura & Ferramentas",
+            "eNPS"
+        ],
         "Texto da Pergunta": [
-            "Meu gestor direto me ouve e oferece feedbacks construtivos.",
-            "As informações importantes chegam até mim de forma clara.",
-            "Sinto que meu esforço é reconhecido e valorizado.",
+            "Meu gestor direto me ouve, apoia meu desenvolvimento e oferece feedbacks construtivos.",
+            "As informações importantes sobre os rumos da empresa chegam até mim de forma clara e transparente.",
+            "Sinto que meu esforço e minhas entregas são reconhecidos e valorizados pela empresa.",
+            "Sinto-me à vontade para expressar minhas opiniões, sugerir ideias ou reportar erros sem medo de julgamentos.",
+            "A empresa demonstra preocupação genuína com a minha saúde mental e me apoia no equilíbrio entre vida pessoal e profissional.",
+            "Percebo que a empresa valoriza a diversidade e promove um ambiente onde todos são tratados com respeito e igualdade.",
+            "Compreendo claramente como o meu trabalho diário contribui para os objetivos e o propósito da empresa.",
+            "Vejo oportunidades claras de aprendizado e crescimento profissional para mim dentro da organização.",
+            "Possuo os equipamentos, sistemas e o ambiente adequado (físico ou remoto) para realizar meu trabalho com qualidade.",
             "De 0 a 10, o quanto recomendaria nossa empresa como um bom lugar para trabalhar?"
         ]
     })
