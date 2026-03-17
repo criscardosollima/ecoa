@@ -8,7 +8,6 @@ from datetime import datetime, timedelta
 from supabase import create_client, Client
 
 # --- CONFIGURAÇÕES DA PÁGINA ---
-# Definimos o título, ícone e o layout para garantir que o sistema ocupe bem o espaço da tela.
 st.set_page_config(
     page_title="Ecoa: Escuta Organizacional",
     page_icon="🌱",
@@ -17,7 +16,6 @@ st.set_page_config(
 )
 
 # --- ESTILIZAÇÃO CSS AVANÇADA (LAYOUT MODERNO E PREMIUM) ---
-# Aqui injetamos CSS para transformar a interface padrão em um sistema corporativo elegante.
 st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -27,25 +25,21 @@ st.markdown("""
             color: #1e293b;
         }
 
-        /* Ocultar elementos padrões do Streamlit */
         #MainMenu {visibility: hidden;}
         footer {visibility: hidden;}
         header {visibility: hidden;}
         
-        /* Ajuste do container principal */
         .block-container {
             padding-top: 2rem;
             padding-bottom: 2rem;
             max-width: 1200px;
         }
 
-        /* Estilização da Sidebar (Menu Lateral) */
         [data-testid="stSidebar"] {
             background-color: #f8fafc;
             border-right: 1px solid #e2e8f0;
         }
         
-        /* Estilização dos itens do Menu (Radio) */
         div.stRadio > div {
             gap: 8px;
         }
@@ -72,115 +66,110 @@ st.markdown("""
             font-weight: 600;
         }
 
-        /* Botões customizados */
         .stButton>button {
             border-radius: 8px;
             font-weight: 600;
             padding: 0.6rem 1.2rem;
             transition: all 0.3s;
-            border: 1px solid #cbd5e1;
-        }
-        
-        .stButton>button:hover {
-            border-color: #3b82f6;
-            background-color: #f0f9ff;
-            color: #3b82f6;
         }
 
-        /* Cards de Módulo */
-        .module-card {
+        .pilar-container {
             background-color: #ffffff;
-            padding: 2rem;
+            padding: 1.5rem;
             border-radius: 12px;
-            border: 1px solid #e2e8f0;
+            border-left: 5px solid #1e3a8a;
+            margin-bottom: 2rem;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            margin-bottom: 1.5rem;
-        }
-
-        /* Login Screen Styles */
-        .login-box {
-            background-color: white;
-            padding: 3rem;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
-            border: 1px solid #f1f5f9;
         }
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONEXÃO AUTOMÁTICA COM O SUPABASE (SECRETS) ---
+# --- CONEXÃO AUTOMÁTICA COM O SUPABASE ---
 @st.cache_resource
 def init_connection():
     try:
+        # Busca as credenciais de forma segura nos Secrets do Streamlit Cloud
         url = st.secrets["SUPABASE_URL"]
         key = st.secrets["SUPABASE_KEY"]
         return create_client(url, key)
     except Exception:
+        # Fallback caso os segredos não estejam configurados ainda
         return None
 
 supabase = init_connection()
 
-# --- INICIALIZAÇÃO DE ESTADOS DO SISTEMA ---
+# --- INICIALIZAÇÃO DE ESTADOS ---
 if 'autenticado' not in st.session_state:
     st.session_state.autenticado = False
 
 if 'usuario_logado' not in st.session_state:
     st.session_state.usuario_logado = None
 
-if 'perfil_logado' not in st.session_state:
-    st.session_state.perfil_logado = None
-
-# Base de usuários inicial (Será sincronizada com o Supabase futuramente)
 if 'usuarios' not in st.session_state:
     st.session_state.usuarios = pd.DataFrame({
         "Nome": ["Cris Lima", "Juliana", "Analista RH"],
         "E-mail": ["cris@ecoa.app", "ju@ecoa.app", "rh@empresa.com"],
-        "Senha": ["admin123", "senha456", "cliente789"],
+        "Palavra-passe": ["admin123", "senha456", "cliente789"],
         "Perfil": ["Admin Master", "Analista RH", "Cliente (Leitura)"],
         "Qtd. Links": [10000, 2000, 500],
         "Status": ["Ativo", "Ativo", "Ativo"]
     })
 
-# Perguntas baseadas em metodologias de mercado (Gallup Q12, GPTW, Aristotle)
+# BANCO DE PERGUNTAS (35 QUESTÕES VALIDADAS)
 if 'perguntas' not in st.session_state:
     st.session_state.perguntas = pd.DataFrame({
-        "Ativa": [True] * 19,
+        "Ativa": [True] * 35,
         "Pilar Estratégico": [
-            "Liderança & Gestão", "Liderança & Gestão", "Liderança & Gestão",
-            "Segurança Psicológica", "Segurança Psicológica",
-            "Bem-estar & Saúde Mental", "Bem-estar & Saúde Mental",
-            "Reconhecimento & Valorização", "Reconhecimento & Valorização",
-            "Desenvolvimento & Crescimento", "Desenvolvimento & Crescimento",
-            "Comunicação & Transparência", "Comunicação & Transparência",
-            "Diversidade & Inclusão", "Diversidade & Inclusão",
-            "Propósito & Orgulho", "Propósito & Orgulho",
+            "Liderança & Gestão", "Liderança & Gestão", "Liderança & Gestão", "Liderança & Gestão", "Liderança & Gestão",
+            "Segurança Psicológica", "Segurança Psicológica", "Segurança Psicológica", "Segurança Psicológica",
+            "Bem-estar & Saúde Mental", "Bem-estar & Saúde Mental", "Bem-estar & Saúde Mental", "Bem-estar & Saúde Mental",
+            "Reconhecimento & Valorização", "Reconhecimento & Valorização", "Reconhecimento & Valorização",
+            "Desenvolvimento & Crescimento", "Desenvolvimento & Crescimento", "Desenvolvimento & Crescimento",
+            "Comunicação & Transparência", "Comunicação & Transparência", "Comunicação & Transparência",
+            "Diversidade & Inclusão", "Diversidade & Inclusão", "Diversidade & Inclusão",
+            "Propósito & Orgulho", "Propósito & Orgulho", "Propósito & Orgulho",
+            "Relacionamento Interpessoal", "Relacionamento Interpessoal", "Relacionamento Interpessoal",
+            "Autonomia & Empoderamento", "Autonomia & Empoderamento",
             "Infraestrutura & Ferramentas", "eNPS"
         ],
         "Texto da Pergunta": [
-            "Meu gestor direto estabelece expectativas claras sobre o que é esperado do meu trabalho.",
-            "Recebo feedbacks construtivos e regulares que me ajudam a melhorar meu desempenho.",
-            "Sinto que meu gestor se importa comigo como pessoa, não apenas como um número.",
-            "Nesta equipe, me sinto seguro para assumir riscos sem medo de punição ou retaliação.",
-            "Sinto-me à vontade para expressar opiniões divergentes ou trazer problemas difíceis à tona.",
-            "A organização incentiva o equilíbrio saudável entre minha vida pessoal e profissional.",
-            "O volume de trabalho exigido me permite realizar minhas tarefas sem comprometer minha saúde mental.",
-            "Nos últimos meses, recebi reconhecimento ou elogios genuínos por um trabalho bem feito.",
-            "Acredito que as promoções e méritos nesta empresa são justos e baseados em mérito.",
-            "Tive oportunidades claras de aprender e crescer profissionalmente no último ano.",
-            "Meu trabalho atual desafia minhas habilidades e me permite usar meu pleno potencial.",
-            "A liderança mantém os colaboradores informados sobre decisões estratégicas importantes.",
-            "Sinto que há um canal aberto e seguro para que minha voz chegue até a diretoria.",
-            "As pessoas aqui são tratadas com respeito, independente de raça, gênero ou idade.",
-            "Sinto que posso ser eu mesmo(a) no ambiente de trabalho sem precisar de 'máscaras'.",
-            "O propósito da empresa me faz sentir que meu trabalho diário tem um significado real.",
-            "Tenho muito orgulho de dizer a outras pessoas que trabalho nesta organização.",
-            "Tenho as ferramentas e o ambiente necessário para realizar meu trabalho com excelência.",
-            "De 0 a 10, o quanto recomendaria nossa empresa como um bom lugar para trabalhar?"
+            "O meu gestor direto estabelece expectativas claras sobre as minhas responsabilidades.",
+            "Recebo feedback regular que me ajuda a evoluir no meu desempenho profissional.",
+            "Sinto que o meu gestor se importa genuinamente comigo enquanto pessoa.",
+            "A liderança da empresa age de forma coerente com os valores que promove.",
+            "Confio na capacidade técnica e estratégica dos líderes da minha área.",
+            "Nesta equipa, sinto-me seguro para assumir riscos sem receio de retaliação.",
+            "Sinto-me à vontade para trazer problemas difíceis e erros à discussão sem julgamentos.",
+            "As minhas competências e talentos únicos são valorizados e utilizados pela equipa.",
+            "É fácil pedir ajuda aos meus colegas ou gestor quando encontro dificuldades.",
+            "A organização incentiva e respeita o equilíbrio entre a minha vida pessoal e profissional.",
+            "O volume de trabalho é equilibrado e não prejudica a minha saúde mental.",
+            "Sinto que tenho apoio da empresa quando passo por momentos de elevado stress.",
+            "A empresa promove iniciativas reais de cuidado com o bem-estar dos colaboradores.",
+            "Recebi um elogio ou reconhecimento genuíno pelo meu trabalho nos últimos 7 dias.",
+            "Acredito que os critérios para promoções e aumentos são justos e transparentes.",
+            "Sinto-me valorizado pelos resultados que entrego à organização.",
+            "Tenho oportunidades reais de aprender e crescer profissionalmente neste último ano.",
+            "Existe alguém na empresa que incentiva ativamente o meu desenvolvimento.",
+            "Vejo um caminho claro de evolução na carreira dentro desta organização.",
+            "A liderança mantém-me informado sobre as decisões estratégicas da empresa.",
+            "Sinto que os canais de comunicação interna funcionam de forma eficiente.",
+            "Existe transparência sobre os sucessos e também sobre os desafios da empresa.",
+            "Pessoas de todos os perfis têm as mesmas oportunidades de crescimento aqui.",
+            "Sinto que posso ser eu próprio no trabalho sem precisar de 'máscaras'.",
+            "A empresa combate activamente qualquer forma de discriminação ou exclusão.",
+            "O propósito e a missão da empresa fazem-me sentir que o meu trabalho é importante.",
+            "Tenho muito orgulho em dizer a outras pessoas que trabalho nesta organização.",
+            "Sinto-me conectado com a cultura e com os valores praticados na empresa.",
+            "Existe um forte espírito de colaboração e entreajuda entre os membros da equipa.",
+            "Tenho um 'melhor amigo' ou relações de confiança profunda no ambiente de trabalho.",
+            "Os conflitos na equipa são resolvidos de forma madura e construtiva.",
+            "Tenho autonomia para decidir como realizar o meu trabalho da melhor forma.",
+            "Sinto que a empresa confia na minha capacidade de tomar decisões importantes.",
+            "Tenho acesso a todas as ferramentas e informações necessárias para ser excelente.",
+            "Numa escala de 0 a 10, recomendaria esta empresa como um excelente lugar para trabalhar?"
         ]
     })
-
-if 'mensagem_padrao' not in st.session_state:
-    st.session_state.mensagem_padrao = "Olá, {nome}! Sua voz é fundamental. Responda à nossa pesquisa até {data_validade}.\nAcesse: {link_pesquisa}"
 
 if 'empresa_atual' not in st.session_state:
     st.session_state.empresa_atual = "Sua Empresa"
@@ -188,253 +177,218 @@ if 'empresa_atual' not in st.session_state:
 if 'data_validade' not in st.session_state:
     st.session_state.data_validade = datetime.today().date() + timedelta(days=15)
 
+if 'mensagem_padrao' not in st.session_state:
+    st.session_state.mensagem_padrao = "Olá, {nome}! Sua voz é fundamental. Responda à nossa pesquisa até {data_validade}.\nAcesse: {link_pesquisa}"
+
 if 'logo_personalizada' not in st.session_state:
     st.session_state.logo_personalizada = None
 
-# Banco de dados de respostas simulado para o Dashboard
+# Base de dados simulada para o Dashboard (carregada se o Supabase estiver offline)
 if 'dados_historicos' not in st.session_state:
     st.session_state.dados_historicos = pd.DataFrame({
-        "departamento": ["RH", "RH", "TI", "TI", "Comercial", "Comercial", "Financeiro", "Logística", "Operações"],
-        "lideranca": [4.5, 4.8, 3.2, 3.5, 4.7, 4.6, 4.0, 3.8, 3.9],
-        "reconhecimento": [4.0, 4.2, 2.8, 3.1, 4.5, 4.3, 3.7, 3.5, 3.6],
-        "comunicacao": [4.2, 4.4, 3.0, 3.3, 4.6, 4.5, 3.8, 3.6, 3.7],
-        "enps": [10, 10, 6, 7, 10, 9, 8, 7, 8]
+        "departamento": ["RH", "Financeiro", "Comercial", "TI", "Operações", "Logística", "RH", "TI", "Vendas"],
+        "lideranca": [4.2, 3.8, 4.7, 3.1, 3.5, 3.9, 4.5, 3.3, 4.8],
+        "comunicacao": [4.0, 3.5, 4.5, 3.0, 3.2, 3.7, 4.3, 3.1, 4.6],
+        "reconhecimento": [3.8, 3.4, 4.6, 2.8, 3.0, 3.5, 4.1, 2.9, 4.7],
+        "enps": [9, 7, 10, 5, 6, 8, 10, 6, 10]
     })
 
 # =====================================================================
-# TELA DE LOGIN (SECURITY FIRST)
+# LÓGICA DE NAVEGAÇÃO: PESQUISA PÚBLICA VS ÁREA ADM
 # =====================================================================
-if not st.session_state.autenticado:
-    _, col_login, _ = st.columns([1, 1.2, 1])
+query_params = st.query_params
+
+if "view" in query_params and query_params["view"] == "survey":
+    # --- INTERFACE DO COLABORADOR ---
+    st.markdown("<h1 style='text-align: center; color: #1e3a8a;'>🌱 Ecoa</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center; color: #64748b; font-size: 1.2rem;'>Sua voz constrói o nosso amanhã.</p>", unsafe_allow_html=True)
+    st.divider()
+
+    st.markdown(f"""
+    ### Olá! Que bom ter você aqui.
+    Estamos iniciando nossa **Pesquisa de Escuta Organizacional** para a **{st.session_state.empresa_atual}**. 
+    O objetivo deste espaço é ouvir genuinamente o que você pensa e sente sobre o nosso ambiente de trabalho.
     
+    **Sua participação é fundamental e totalmente anônima.** Nenhuma resposta é vinculada ao seu nome ou e-mail. 
+    Reserve cerca de **10 minutos** para responder com tranquilidade e sinceridade.
+    """)
+    
+    with st.form("form_colaborador", clear_on_submit=True):
+        st.markdown("#### 📍 Identificação Inicial")
+        setor = st.selectbox("Selecione o seu Departamento:", 
+                             ["Administrativo", "Comercial", "Financeiro", "Logística", "Operações", "RH", "TI"])
+        
+        st.divider()
+        
+        df_ativas = st.session_state.perguntas[st.session_state.perguntas["Ativa"]]
+        pilares = df_ativas["Pilar Estratégico"].unique()
+        
+        for pilar in pilares:
+            st.markdown(f"<div class='pilar-container'><h3>📊 {pilar}</h3>", unsafe_allow_html=True)
+            questoes_pilar = df_ativas[df_ativas["Pilar Estratégico"] == pilar]
+            
+            for idx, row in questoes_pilar.iterrows():
+                if pilar == "eNPS":
+                    st.select_slider(f"**{row['Texto da Pergunta']}**", 
+                                     options=[str(i) for i in range(11)], 
+                                     value="8", key=f"q_{idx}")
+                else:
+                    st.radio(f"**{row['Texto da Pergunta']}**", 
+                             options=["Discordo Totalmente", "Discordo", "Neutro", "Concordo", "Concordo Totalmente"], 
+                             index=3, horizontal=True, key=f"q_{idx}")
+            st.markdown("</div>", unsafe_allow_html=True)
+            
+        st.markdown("#### 💬 Espaço Aberto")
+        comentario = st.text_area("Comentários ou sugestões adicionais (opcional):", placeholder="Sinta-se à vontade...")
+
+        if st.form_submit_button("Enviar Minha Contribuição", type="primary", use_container_width=True):
+            st.balloons()
+            st.success("Obrigado! Suas respostas foram enviadas com sucesso.")
+            st.info("Você pode fechar esta aba.")
+
+# =====================================================================
+# ÁREA ADMINISTRATIVA
+# =====================================================================
+elif not st.session_state.autenticado:
+    # TELA DE LOGIN
+    _, col_login, _ = st.columns([1, 1.2, 1])
     with col_login:
         st.write("")
         st.write("")
-        st.write("")
         st.markdown("<h1 style='text-align: center; color: #1e3a8a; font-size: 3rem;'>🌱 Ecoa</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #64748b; margin-top: -15px;'>Plataforma de Escuta Organizacional</p>", unsafe_allow_html=True)
-        
+        st.markdown("<p style='text-align: center; color: #64748b;'>Painel de Gestão Estratégica</p>", unsafe_allow_html=True)
         with st.form("login_form"):
-            st.markdown("#### Login do Usuário")
-            user_email = st.text_input("E-mail", placeholder="seu@email.com")
-            user_pass = st.text_input("Senha", type="password", placeholder="••••••••")
-            
-            entrar = st.form_submit_button("Acessar Plataforma", use_container_width=True)
-            
-            if entrar:
-                u_base = st.session_state.usuarios
-                valido = u_base[(u_base['E-mail'] == user_email) & (u_base['Senha'] == user_pass) & (u_base['Status'] == 'Ativo')]
-                
+            st.markdown("#### Autenticação")
+            u_email = st.text_input("E-mail", placeholder="seu@email.com")
+            u_pass = st.text_input("Senha", type="password", placeholder="••••••••")
+            if st.form_submit_button("Entrar", use_container_width=True):
+                u_db = st.session_state.usuarios
+                valido = u_db[(u_db['E-mail'] == u_email) & (u_db['Palavra-passe'] == u_pass) & (u_db['Status'] == 'Ativo')]
                 if not valido.empty:
                     st.session_state.autenticado = True
                     st.session_state.usuario_logado = valido.iloc[0]['Nome']
-                    st.session_state.perfil_logado = valido.iloc[0]['Perfil']
                     st.rerun()
-                else:
-                    st.error("Dados de acesso incorretos. Por favor, tente novamente.")
+                else: st.error("Acesso negado. Verifique suas credenciais.")
 
-# =====================================================================
-# INTERFACE PRINCIPAL (MODULAR E MODERNA)
-# =====================================================================
 else:
-    # --- BARRA LATERAL (MODERN NAV) ---
+    # INTERFACE ADMIN COMPLETA
     with st.sidebar:
-        # Logo da Empresa ou Ícone Padrão
-        if st.session_state.logo_personalizada is not None:
-            st.image(st.session_state.logo_personalizada, width=130)
+        if st.session_state.logo_personalizada:
+            st.image(st.session_state.logo_personalizada, width=120)
         else:
             st.markdown("<h2 style='color: #1e3a8a;'>🌱 Ecoa</h2>", unsafe_allow_html=True)
         
-        st.caption(f"Olá, {st.session_state.usuario_logado}")
+        st.caption(f"Admin: {st.session_state.usuario_logado}")
         st.divider()
-        
-        # Menu de Navegação Moderno
-        menu = st.radio(
-            "Navegação",
-            [
-                "🏢 Empresa",
-                "📝 Formulário da Pesquisa",
-                "✉️ Mensagem Automática",
-                "🔗 Gerenciamento de Links",
-                "📊 Dashboard Geral",
-                "📑 Relatórios",
-                "👥 Clientes (Usuários)",
-                "⚙️ Configurações"
-            ],
-            label_visibility="collapsed"
-        )
-        
+        menu = st.radio("Navegação", 
+                        ["🏢 Empresa", "📝 Formulário da Pesquisa", "✉️ Mensagem Automática", 
+                         "🔗 Gerenciamento de Links", "📊 Dashboard Geral", "📑 Relatórios", 
+                         "👥 Clientes (Utilizadores)", "⚙️ Configurações"], 
+                        label_visibility="collapsed")
         st.divider()
-        if st.button("🚪 Encerrar Sessão", use_container_width=True):
+        if st.button("🚪 Sair", use_container_width=True):
             st.session_state.autenticado = False
             st.rerun()
-            
-        st.caption("v1.0.5 | Desenvolvido por Cris Lima")
+        st.caption("v1.2.5 | Desenvolvido por Cris Lima")
 
-    # --- TÍTULO DO MÓDULO ATUAL ---
     st.markdown(f"<h2 style='color: #334155; font-weight: 700;'>{menu}</h2>", unsafe_allow_html=True)
-    st.write(f"Gestão estratégica da pesquisa de clima para: **{st.session_state.empresa_atual}**")
+    st.write(f"Configurações para: **{st.session_state.empresa_atual}**")
     st.divider()
 
-    # =====================================================================
-    # MÓDULOS (LÓGICA DETALHADA)
-    # =====================================================================
-    
+    # --- MÓDULO EMPRESA ---
     if menu == "🏢 Empresa":
-        st.markdown("### 🏛️ Estrutura Organizacional")
-        with st.container():
-            col1, col2 = st.columns(2)
-            with col1:
-                st.session_state.empresa_atual = st.text_input("Nome da Empresa", st.session_state.empresa_atual)
-                st.text_input("CNPJ", "00.000.000/0001-00")
-            with col2:
-                st.selectbox("Porte Corporativo", ["Micro", "Pequena", "Média", "Grande"])
-                st.selectbox("Segmento de Atuação", ["Serviços", "Indústria", "Tecnologia", "Varejo", "Saúde"])
-            
-            st.markdown("#### Departamentos")
-            st.text_area("Mapeamento de Áreas (uma por linha)", "Recursos Humanos\nComercial\nOperações\nFinanceiro\nTI\nLogística", height=150)
-            
-            if st.button("💾 Salvar Informações da Empresa", type="primary"):
-                st.success("Dados da empresa salvos com sucesso!")
-
-    elif menu == "📝 Formulário da Pesquisa":
-        st.markdown("### 📝 Configuração do Questionário")
-        st.write("Personalize o banco de perguntas que será apresentado aos respondentes.")
-        
-        perg_edit = st.data_editor(
-            st.session_state.perguntas,
-            num_rows="dynamic",
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Ativa": st.column_config.CheckboxColumn("Ativa?"),
-                "Pilar Estratégico": st.column_config.SelectboxColumn("Pilar", options=["Liderança & Gestão", "Segurança Psicológica", "Bem-estar & Saúde Mental", "Reconhecimento & Valorização", "Desenvolvimento & Crescimento", "Comunicação & Transparência", "Diversidade & Inclusão", "Propósito & Orgulho", "Infraestrutura & Ferramentas", "eNPS"])
-            }
-        )
-        st.session_state.perguntas = perg_edit
-        
-        with st.expander("👁️ Visualizar como o Colaborador"):
-            for _, p in perg_edit[perg_edit["Ativa"]].iterrows():
-                if p["Pilar Estratégico"] == "eNPS":
-                    st.slider(f"{p['Texto da Pergunta']}", 0, 10, 8)
-                else:
-                    st.select_slider(f"[{p['Pilar Estratégico']}] {p['Texto da Pergunta']}", options=["Discordo Totalmente", "Discordo", "Neutro", "Concordo", "Concordo Totalmente"], value="Concordo")
-
-    elif menu == "✉️ Mensagem Automática":
-        st.markdown("### ✉️ Convite Humanizado")
-        st.write("Defina o texto de convite para a pesquisa. Use as tags dinâmicas para personalização.")
-        
-        body_msg = st.text_area("Texto do Convite", st.session_state.mensagem_padrao, height=200)
-        st.caption("Tags: `{nome}`, `{data_validade}`, `{link_pesquisa}`")
-        
-        if st.button("💾 Atualizar Modelo"):
-            st.session_state.mensagem_padrao = body_msg
-            st.success("Modelo de mensagem salvo!")
-            
-        st.markdown("#### Prévia do Envio")
-        prev = body_msg.replace("{nome}", "João").replace("{data_validade}", st.session_state.data_validade.strftime("%d/%m/%Y")).replace("{link_pesquisa}", "https://ecoa.app/pesquisa/demo")
-        st.info(prev)
-
-    elif menu == "🔗 Gerenciamento de Links":
-        st.markdown("### 🔗 Controle de Disparos")
+        st.markdown("### 🏛️ Dados Organizacionais")
         c1, c2 = st.columns(2)
         with c1:
-            st.session_state.data_validade = st.date_input("Data Limite da Campanha", st.session_state.data_validade)
+            st.session_state.empresa_atual = st.text_input("Nome da Empresa", st.session_state.empresa_atual)
+            st.text_input("CNPJ", "00.000.000/0001-00")
         with c2:
-            st.write(f"**Identificador da Empresa:** {st.session_state.empresa_atual.replace(' ', '').lower()}")
-            
-        st.divider()
-        slug = st.session_state.empresa_atual.replace(" ", "").lower()
-        st.markdown("#### Link Geral (Campanha)")
-        st.code(f"https://ecoa.app/{slug}/pesquisa", language="html")
-        
-        st.markdown("#### Links Individuais")
-        st.file_uploader("Subir Lista de Colaboradores (CSV/Excel)", type=["csv", "xlsx"])
-        if st.button("Gerar Tokens e Disparar"):
-            st.success("Disparos agendados no servidor!")
+            st.selectbox("Porte", ["Micro", "Pequena", "Média", "Grande"])
+            st.selectbox("Setor Econômico", ["Serviços", "Indústria", "Tecnologia", "Saúde"])
+        st.text_area("Departamentos da Empresa", "RH\nComercial\nOperações\nFinanceiro\nTI", height=100)
+        if st.button("Salvar Dados"): st.success("Informações atualizadas!")
 
+    # --- MÓDULO FORMULÁRIO ---
+    elif menu == "📝 Formulário da Pesquisa":
+        st.markdown("### 📝 Editor de Questionário")
+        st.info("Gerencie aqui as 35 questões baseadas em metodologias validadas.")
+        p_edit = st.data_editor(st.session_state.perguntas, num_rows="dynamic", use_container_width=True, hide_index=True)
+        st.session_state.perguntas = p_edit
+        st.markdown("---")
+        st.markdown(f"🔗 [Testar Experiência do Colaborador](/?view=survey)")
+
+    # --- MÓDULO MENSAGEM ---
+    elif menu == "✉️ Mensagem Automática":
+        st.markdown("### ✉️ Convite Personalizado")
+        msg = st.text_area("Texto da Mensagem", st.session_state.mensagem_padrao, height=200)
+        st.caption("Variáveis: `{nome}`, `{data_validade}`, `{link_pesquisa}`")
+        if st.button("Guardar"): 
+            st.session_state.mensagem_padrao = msg
+            st.success("Modelo salvo!")
+        st.divider()
+        st.markdown("#### Prévia (João)")
+        prev = msg.replace("{nome}", "João").replace("{data_validade}", st.session_state.data_validade.strftime("%d/%m/%Y")).replace("{link_pesquisa}", "https://ecoa.app/pesquisa")
+        st.info(prev)
+
+    # --- MÓDULO LINKS ---
+    elif menu == "🔗 Gerenciamento de Links":
+        st.markdown("### 🔗 Controle de Disparos")
+        st.session_state.data_validade = st.date_input("Data de Expiração", st.session_state.data_validade)
+        slug = st.session_state.empresa_atual.lower().replace(' ', '')
+        st.code(f"https://ecoa.app/{slug}/pesquisa?view=survey", language="html")
+        st.file_uploader("Subir Lista de Colaboradores", type=["csv", "xlsx"])
+        if st.button("Simular Disparos"): st.success("E-mails enviados!")
+
+    # --- MÓDULO DASHBOARD ---
     elif menu == "📊 Dashboard Geral":
         st.markdown("### 📊 Inteligência de Dados")
+        df = st.session_state.dados_historicos
+        col1, col2, col3 = st.columns(3)
         
-        d_demo = st.session_state.dados_historicos
-        m1, m2, m3 = st.columns(3)
+        # Métricas Consolidadas
+        col1.metric("Liderança (Média)", f"{df['lideranca'].mean():.2f}", "+0.15")
+        col2.metric("Comunicação (Média)", f"{df['comunicacao'].mean():.2f}", "-0.05")
         
-        # Métricas em Cards
-        m1.metric("Liderança (Média)", f"{d_demo['lideranca'].mean():.2f}", "+0.2")
-        m2.metric("Comunicação (Média)", f"{d_demo['comunicacao'].mean():.2f}", "-0.1")
-        
-        # eNPS Logic
-        prom = len(d_demo[d_demo['enps'] >= 9])
-        detr = len(d_demo[d_demo['enps'] <= 6])
-        enps_final = ((prom - detr) / len(d_demo)) * 100
-        m3.metric("Score eNPS", f"{enps_final:.0f}", "Zona de Qualidade")
+        prom = len(df[df['enps'] >= 9])
+        detr = len(df[df['enps'] <= 6])
+        enps_val = ((prom - detr) / len(df)) * 100
+        col3.metric("Score eNPS", f"{enps_val:.0f}", "Bom")
         
         st.divider()
-        
-        # Gráficos Plotly Modernos
-        df_group = d_demo.groupby("departamento")[["lideranca", "comunicacao", "reconhecimento"]].mean().reset_index()
-        fig = px.bar(df_group, x="departamento", y=["lideranca", "comunicacao", "reconhecimento"], 
-                     barmode="group", title="Performance por Pilar e Setor",
-                     color_discrete_sequence=["#1e3a8a", "#10b981", "#f59e0b"],
-                     template="plotly_white")
+        # Gráfico por Setor
+        fig = px.bar(df.groupby("departamento")[["lideranca", "comunicacao"]].mean().reset_index(), 
+                     x="departamento", y=["lideranca", "comunicacao"], 
+                     barmode="group", title="Média por Departamento",
+                     color_discrete_sequence=["#1e3a8a", "#10b981"])
         st.plotly_chart(fig, use_container_width=True)
 
+    # --- MÓDULO RELATÓRIOS ---
     elif menu == "📑 Relatórios":
-        st.markdown("### 📑 Geração de Apresentações")
-        st.write("Exporte os resultados da campanha diretamente para um arquivo PowerPoint formatado.")
-        
-        if st.button("🚀 Criar Apresentação PPTX", type="primary"):
+        st.markdown("### 📑 Exportação de Resultados")
+        st.write("Gere o PowerPoint executivo com os dados atuais da campanha.")
+        if st.button("🚀 Gerar Apresentação PPTX", type="primary"):
             prs = Presentation()
-            # Capa
-            s0 = prs.slides.add_slide(prs.slide_layouts[0])
-            s0.shapes.title.text = f"Análise de Clima: {st.session_state.empresa_atual}"
-            s0.placeholders[1].text = f"Ciclo: {datetime.now().year} | Gerado em {datetime.now().strftime('%d/%m/%Y')}"
+            slide = prs.slides.add_slide(prs.slide_layouts[0])
+            slide.shapes.title.text = f"Resultados Ecoa: {st.session_state.empresa_atual}"
+            slide.placeholders[1].text = f"Gerado em {datetime.now().strftime('%d/%m/%Y')}"
             
-            # Sumário de Médias
-            s1 = prs.slides.add_slide(prs.slide_layouts[1])
-            s1.shapes.title.text = "Visão Geral dos Resultados"
-            tf = s1.placeholders[1].text_frame
-            tf.text = "Índices Principais:"
-            p1 = tf.add_paragraph(); p1.text = f"• Média Liderança: {st.session_state.dados_historicos['lideranca'].mean():.2f}"
-            p2 = tf.add_paragraph(); p2.text = f"• Score eNPS: {enps_final:.0f}"
-            
-            buffer = io.BytesIO()
-            prs.save(buffer)
-            buffer.seek(0)
-            
-            st.download_button("📥 Baixar Relatório (.pptx)", data=buffer, file_name=f"Relatorio_{st.session_state.empresa_atual}.pptx")
+            buf = io.BytesIO()
+            prs.save(buf)
+            buf.seek(0)
+            st.download_button("📥 Baixar PPTX", data=buf, file_name=f"Relatorio_{st.session_state.empresa_atual}.pptx")
 
-    elif menu == "👥 Clientes (Usuários)":
+    # --- MÓDULO USUÁRIOS ---
+    elif menu == "👥 Clientes (Utilizadores)":
         st.markdown("### 👥 Gestão de Acessos")
-        st.write("Controle os usuários administrativos e seus níveis de permissão.")
-        
-        users_fin = st.data_editor(
-            st.session_state.usuarios,
-            num_rows="dynamic",
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Senha": st.column_config.TextColumn("Senha", help="Senha de acesso"),
-                "Perfil": st.column_config.SelectboxColumn("Perfil", options=["Admin Master", "Analista RH", "Cliente (Leitura)"]),
-                "Status": st.column_config.SelectboxColumn("Status", options=["Ativo", "Inativo", "Pendente"])
-            }
-        )
-        st.session_state.usuarios = users_fin
+        u_edit = st.data_editor(st.session_state.usuarios, num_rows="dynamic", use_container_width=True, hide_index=True)
+        st.session_state.usuarios = u_edit
 
+    # --- MÓDULO CONFIGURAÇÕES ---
     elif menu == "⚙️ Configurações":
-        st.markdown("### ⚙️ Preferências")
-        st.markdown("#### 🎨 Customização de Logo")
-        up = st.file_uploader("Substituir Imagem do Sistema", type=["png", "jpg"])
-        if up:
-            st.session_state.logo_personalizada = up
-            st.success("Logo atualizada!")
-            
+        st.markdown("### ⚙️ Preferências do Sistema")
+        up = st.file_uploader("Upload da Logo", type=["png", "jpg"])
+        if up: st.session_state.logo_personalizada = up; st.success("Logo atualizada!")
         st.divider()
-        st.markdown("#### 🔒 Segurança e Banco")
-        if supabase:
-            st.success("Conectado ao Supabase Cloud.")
-        else:
-            st.warning("Aguardando chaves do Supabase nos Secrets.")
-        
-        st.divider()
-        st.caption("Ecoa - Plataforma de Escuta Organizacional | Por Cris Lima")
+        if supabase: st.success("Conectado ao Supabase Cloud.")
+        else: st.warning("Configurações do Supabase ausentes nos Secrets.")
+        st.caption("Ecoa por Cris Lima | v1.2.5")
