@@ -13,110 +13,163 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- INICIALIZAÇÃO DE DADOS MOCKADOS (CASO O SUPABASE NÃO ESTEJA CONECTADO) ---
+# --- INICIALIZAÇÃO DE DADOS E ESTADOS (MEMÓRIA DO SISTEMA) ---
 if 'dados_locais' not in st.session_state:
     st.session_state.dados_locais = pd.DataFrame(columns=["data", "departamento", "lideranca", "comunicacao", "reconhecimento", "enps"])
 
-# --- BARRA LATERAL (CONFIGURAÇÕES DO SISTEMA) ---
-with st.sidebar:
-    st.title("⚙️ Configurações (RH)")
-    
-    st.markdown("### 🎨 Personalização")
-    st.write("Deixe a plataforma com a cara da sua empresa.")
-    # NOVO: Botão para o RH subir a logo da empresa
-    logo_empresa = st.file_uploader("Suba a Logo (PNG ou JPG)", type=["png", "jpg", "jpeg"])
-    
-    st.markdown("---")
-    st.markdown("### ☁️ Banco de Dados")
-    st.write("Conecte seu banco de dados Supabase aqui.")
-    supabase_url = st.text_input("Supabase URL", type="password")
-    supabase_key = st.text_input("Supabase Key", type="password")
-    
-    if supabase_url and supabase_key:
-        st.success("Conectado ao Supabase!")
-    else:
-        st.info("Rodando em modo Local/Teste. Insira as credenciais para nuvem.")
+if 'perguntas' not in st.session_state:
+    # Banco de perguntas padrão editável
+    st.session_state.perguntas = pd.DataFrame({
+        "Ativa": [True, True, True, True],
+        "Pilar Estratégico": ["Liderança", "Comunicação", "Reconhecimento", "eNPS"],
+        "Texto da Pergunta": [
+            "Meu gestor direto me ouve e oferece feedbacks construtivos.",
+            "As informações importantes chegam até mim de forma clara.",
+            "Sinto que meu esforço é reconhecido e valorizado.",
+            "De 0 a 10, o quanto recomendaria nossa empresa como um bom lugar para trabalhar?"
+        ]
+    })
 
+if 'mensagem_padrao' not in st.session_state:
+    st.session_state.mensagem_padrao = "Olá, {nome}! Sua voz é fundamental para construirmos um ambiente cada vez melhor. Reserve 2 minutinhos para nos contar como você se sente. É 100% seguro e anônimo.\nAcesse: {link_pesquisa}"
+
+if 'logo_empresa' not in st.session_state:
+    st.session_state.logo_empresa = None
+
+# --- MENU LATERAL DE NAVEGAÇÃO ---
+with st.sidebar:
+    st.title("🌱 Ecoa")
+    st.markdown("---")
+    
+    # O menu principal que muda as telas
+    menu = st.radio(
+        "Menu Principal",
+        [
+            "🏢 Empresa",
+            "📝 Formulário da Pesquisa",
+            "✉️ Mensagem Automática",
+            "🔗 Gerenciamento de Links",
+            "📊 Dashboard Geral",
+            "📑 Relatórios",
+            "👥 Clientes (Usuários)",
+            "⚙️ Configurações"
+        ]
+    )
+    
     st.markdown("---")
     st.caption("Desenvolvido com 💙 por Cris Lima")
 
-# --- CABEÇALHO ---
+# --- LÓGICA DE EXIBIÇÃO DO CABEÇALHO ---
 col_logo, col_titulo = st.columns([1, 8])
-
 with col_logo:
-    # NOVO: Lógica para mostrar a logo enviada ou um ícone padrão
-    if logo_empresa is not None:
-        st.image(logo_empresa, width=80)
+    if st.session_state.logo_empresa is not None:
+        st.image(st.session_state.logo_empresa, width=80)
     else:
-        st.markdown("## 🌱") # Ícone exibido se nenhuma logo for enviada
-
+        st.markdown("## 🌱")
 with col_titulo:
-    st.title("Ecoa: Plataforma de Escuta Organizacional")
-    
-st.markdown("Uma ferramenta projetada para ouvir, entender e desenvolver pessoas de forma segura e transparente.")
+    st.title(menu) # O título da página muda conforme o menu selecionado
 
-# --- ABAS DO SISTEMA ---
-tab1, tab2, tab3 = st.tabs(["📝 Pesquisa (Visão Colaborador)", "📊 Dashboard (Visão RH)", "📑 Gerar Apresentação (Diretoria)"])
 
 # =====================================================================
-# ABA 1: A PESQUISA (VISÃO DO COLABORADOR)
+# MÓDULO 1: EMPRESA
 # =====================================================================
-with tab1:
-    st.markdown("### Bem-vindo(a) à nossa Pesquisa de Clima")
-    st.write("Sua voz é muito importante para nós. Responda com sinceridade. **Garantimos 100% de anonimato e sigilo das suas respostas.**")
+if menu == "🏢 Empresa":
+    st.markdown("### Cadastro e Dados Estruturais")
+    st.write("Gerencie as informações da empresa cliente que está rodando a pesquisa atual.")
     
-    with st.form("form_pesquisa", clear_on_submit=True):
-        col1, col2 = st.columns(2)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.text_input("Nome Fantasia da Empresa", "Pessin Gestão (Exemplo)")
+        st.text_input("CNPJ", "00.000.000/0001-00")
+    with col2:
+        st.selectbox("Porte da Empresa", ["Micro (até 9 func.)", "Pequena (10 a 49)", "Média (50 a 99)", "Grande (+100)"])
+        st.selectbox("Segmento", ["Serviços", "Indústria", "Comércio", "Tecnologia", "Saúde"])
         
-        with col1:
-            departamento = st.selectbox("Seu Departamento:", ["Administrativo", "Vendas", "Logística", "Tecnologia", "Atendimento"])
-        
+    st.markdown("#### Estrutura de Departamentos")
+    st.write("Adicione os departamentos que aparecerão para o colaborador selecionar:")
+    st.text_area("Departamentos (um por linha)", "Administrativo\nVendas\nLogística\nTecnologia\nAtendimento", height=120)
+    st.button("Salvar Dados da Empresa", type="primary")
+
+# =====================================================================
+# MÓDULO 2: FORMULÁRIO DA PESQUISA
+# =====================================================================
+elif menu == "📝 Formulário da Pesquisa":
+    st.markdown("### Banco de Perguntas Dinâmico")
+    st.write("Aqui você molda a voz da sua pesquisa. Marque a caixa **Ativa** para incluir a pergunta no formulário que será enviado. Você pode editar os textos clicando diretamente na tabela ou adicionar novas linhas no final.")
+    
+    # Editor de dados interativo do Streamlit
+    perguntas_editadas = st.data_editor(
+        st.session_state.perguntas,
+        num_rows="dynamic", # Permite adicionar/excluir linhas
+        use_container_width=True,
+        hide_index=True
+    )
+    
+    st.session_state.perguntas = perguntas_editadas
+    st.success("As alterações na tabela são salvas automaticamente na memória desta sessão.")
+    
+    with st.expander("👀 Visualizar Formulário (Simulação do Colaborador)"):
+        st.write("Assim é como o colaborador verá as perguntas ativas no celular dele:")
         st.markdown("---")
-        st.markdown("#### Avalie os seguintes pilares (1 - Discordo Totalmente a 5 - Concordo Totalmente)")
-        
-        lideranca = st.slider("Meu gestor direto me ouve e oferece feedbacks construtivos.", 1, 5, 3)
-        comunicacao = st.slider("As informações importantes chegam até mim de forma clara.", 1, 5, 3)
-        reconhecimento = st.slider("Sinto que meu esforço é reconhecido e valorizado.", 1, 5, 3)
-        
-        st.markdown("#### eNPS (Employee Net Promoter Score)")
-        enps = st.slider("De 0 a 10, o quanto você recomendaria nossa empresa como um bom lugar para trabalhar?", 0, 10, 8)
-        
-        submit = st.form_submit_button("Enviar Minhas Respostas", type="primary")
-        
-        if submit:
-            nova_resposta = {
-                "data": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "departamento": departamento,
-                "lideranca": lideranca,
-                "comunicacao": comunicacao,
-                "reconhecimento": reconhecimento,
-                "enps": enps
-            }
-            
-            # Como fallback local:
-            st.session_state.dados_locais = pd.concat([st.session_state.dados_locais, pd.DataFrame([nova_resposta])], ignore_index=True)
-            
-            st.success("Muito obrigado por compartilhar sua visão conosco! Suas respostas foram salvas com segurança.")
+        for index, row in perguntas_editadas[perguntas_editadas["Ativa"]].iterrows():
+            if row["Pilar Estratégico"] == "eNPS":
+                st.slider(f"(eNPS) {row['Texto da Pergunta']}", 0, 10, 8, key=f"sim_{index}")
+            else:
+                st.slider(f"({row['Pilar Estratégico']}) {row['Texto da Pergunta']}", 1, 5, 3, key=f"sim_{index}")
 
 # =====================================================================
-# ABA 2: DASHBOARD (VISÃO RH)
+# MÓDULO 3: MENSAGEM AUTOMÁTICA
 # =====================================================================
-with tab2:
-    st.markdown("### 📊 Análise de Dados em Tempo Real")
+elif menu == "✉️ Mensagem Automática":
+    st.markdown("### Comunicação Humanizada")
+    st.write("Personalize o texto de convite que será disparado via e-mail ou WhatsApp junto com o link da pesquisa.")
+    st.info("Dica: Use `{nome}` para o sistema inserir o nome do colaborador e `{link_pesquisa}` para inserir o link único.")
+    
+    msg_atual = st.text_area("Corpo da Mensagem", st.session_state.mensagem_padrao, height=150)
+    if st.button("Salvar Modelo de Mensagem", type="primary"):
+        st.session_state.mensagem_padrao = msg_atual
+        st.success("Mensagem padrão atualizada com sucesso!")
+        
+    st.markdown("#### Pré-visualização do envio para o João:")
+    st.code(msg_atual.replace("{nome}", "João").replace("{link_pesquisa}", "https://ecoa.app/pesquisa/xyz987"))
+
+# =====================================================================
+# MÓDULO 4: GERENCIAMENTO DE LINKS
+# =====================================================================
+elif menu == "🔗 Gerenciamento de Links":
+    st.markdown("### Controle de Acessos e Disparos")
+    st.write("Gere links únicos para mapeamento seguro de respondentes ou um link geral para equipes operacionais.")
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### 📧 Envio em Lote (Link Único)")
+        st.write("Faça upload de uma planilha com Nome e E-mail. O sistema criará links não-compartilháveis para cada pessoa.")
+        st.file_uploader("Planilha de Colaboradores (.csv ou .xlsx)", type=["csv", "xlsx"])
+        st.button("Processar e Gerar Disparos")
+        
+    with col2:
+        st.markdown("#### 🌐 Link Geral da Campanha")
+        st.write("Para murais, totens de RH ou grupos de WhatsApp. O IP será rastreado para evitar dupla resposta.")
+        st.code("https://ecoa-escuta.streamlit.app/?campanha=Q1_2026", language="html")
+        st.button("Copiar Link Geral")
+
+# =====================================================================
+# MÓDULO 5: DASHBOARD GERAL
+# =====================================================================
+elif menu == "📊 Dashboard Geral":
+    st.markdown("### Análise de Dados em Tempo Real")
     
     df = st.session_state.dados_locais
     
     if df.empty:
-        st.info("Nenhuma resposta registrada ainda. Vá na aba 'Pesquisa' e insira dados de teste.")
+        st.info("Nenhuma resposta registrada no momento. Conecte ao banco de dados ou simule respostas.")
     else:
         colA, colB, colC = st.columns(3)
+        media_lid = df["lideranca"].mean() if "lideranca" in df else 0
+        media_rec = df["reconhecimento"].mean() if "reconhecimento" in df else 0
         
-        media_lid = df["lideranca"].mean()
-        media_com = df["comunicacao"].mean()
-        media_rec = df["reconhecimento"].mean()
-        
-        promotores = len(df[df["enps"] >= 9])
-        detratores = len(df[df["enps"] <= 6])
+        promotores = len(df[df["enps"] >= 9]) if "enps" in df else 0
+        detratores = len(df[df["enps"] <= 6]) if "enps" in df else 0
         total = len(df)
         enps_score = ((promotores - detratores) / total) * 100 if total > 0 else 0
         
@@ -125,63 +178,85 @@ with tab2:
         colC.metric("eNPS Geral", f"{enps_score:.0f}", help="Varia de -100 a +100")
         
         st.markdown("---")
-        st.markdown("#### Médias por Departamento")
-        
         df_agrupado = df.groupby("departamento")[["lideranca", "comunicacao", "reconhecimento"]].mean().reset_index()
-        
         fig = px.bar(df_agrupado, x="departamento", y=["lideranca", "comunicacao", "reconhecimento"],
                      barmode="group", title="Visão Comparativa de Pilares por Setor",
-                     labels={"value": "Média", "variable": "Pilar"},
                      color_discrete_sequence=["#1f77b4", "#ff7f0e", "#2ca02c"])
         st.plotly_chart(fig, use_container_width=True)
 
 # =====================================================================
-# ABA 3: EXPORTAÇÃO POWERPOINT (DIRETORIA)
+# MÓDULO 6: RELATÓRIOS
 # =====================================================================
-with tab3:
-    st.markdown("### 📑 Gerar Relatório Executivo")
-    st.write("Exporte os dados consolidados diretamente para uma apresentação pronta para a diretoria.")
+elif menu == "📑 Relatórios":
+    st.markdown("### Exportação e Apresentação Executiva")
+    st.write("Exporte os dados consolidados diretamente para uma apresentação de PowerPoint pronta para a diretoria.")
     
     df_relatorio = st.session_state.dados_locais
-    
     if df_relatorio.empty:
         st.warning("É necessário ter respostas na pesquisa para gerar o relatório.")
     else:
         def gerar_pptx(dataframe):
             prs = Presentation()
-            
             slide_titulo = prs.slides.add_slide(prs.slide_layouts[0])
-            title = slide_titulo.shapes.title
-            subtitle = slide_titulo.placeholders[1]
-            title.text = "Resultados: Pesquisa Ecoa"
-            subtitle.text = f"Plataforma de Escuta Organizacional - {datetime.now().strftime('%d/%m/%Y')}"
+            slide_titulo.shapes.title.text = "Resultados: Pesquisa Ecoa"
+            slide_titulo.placeholders[1].text = f"Plataforma de Escuta Organizacional - {datetime.now().strftime('%d/%m/%Y')}"
             
             slide_resumo = prs.slides.add_slide(prs.slide_layouts[1])
-            title2 = slide_resumo.shapes.title
-            title2.text = "Média Geral dos Pilares Avaliados"
-            
+            slide_resumo.shapes.title.text = "Média Geral dos Pilares Avaliados"
             tf = slide_resumo.placeholders[1].text_frame
             tf.text = "Com base nas respostas coletadas na plataforma:"
             
-            p = tf.add_paragraph()
-            p.text = f"• Liderança: {dataframe['lideranca'].mean():.2f} / 5.0"
-            p = tf.add_paragraph()
-            p.text = f"• Comunicação: {dataframe['comunicacao'].mean():.2f} / 5.0"
-            p = tf.add_paragraph()
-            p.text = f"• Reconhecimento: {dataframe['reconhecimento'].mean():.2f} / 5.0"
+            for pilar in ["lideranca", "comunicacao", "reconhecimento"]:
+                if pilar in dataframe:
+                    p = tf.add_paragraph()
+                    p.text = f"• {pilar.capitalize()}: {dataframe[pilar].mean():.2f} / 5.0"
             
             binary_output = io.BytesIO()
             prs.save(binary_output)
             binary_output.seek(0)
             return binary_output
         
-        st.info("Clique no botão abaixo para baixar sua apresentação `.pptx` compilada automaticamente pelo Python.")
-        
+        st.info("Clique no botão abaixo para baixar sua apresentação `.pptx` compilada automaticamente.")
         if st.button("Preparar Arquivo PowerPoint", type="primary"):
             arquivo_pptx = gerar_pptx(df_relatorio)
-            st.download_button(
-                label="📥 Baixar Apresentação (.pptx)",
-                data=arquivo_pptx,
-                file_name="Relatorio_Ecoa.pptx",
-                mime="application/vnd.openxmlformats-officedocument.presentationml.presentation"
-            )
+            st.download_button("📥 Baixar Apresentação (.pptx)", data=arquivo_pptx, file_name="Relatorio_Ecoa.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+
+# =====================================================================
+# MÓDULO 7: CLIENTES (USUÁRIOS)
+# =====================================================================
+elif menu == "👥 Clientes (Usuários)":
+    st.markdown("### Gestão de Acessos")
+    st.write("Controle quem tem permissão para acessar o painel de resultados do Ecoa.")
+    
+    dados_usuarios = pd.DataFrame({
+        "Nome": ["Cris Lima", "Juliana", "Diretor Financeiro"],
+        "E-mail": ["cris@ecoa.app", "ju@ecoa.app", "diretor@empresa.com"],
+        "Nível de Acesso": ["Admin Master", "Analista RH", "Apenas Leitura (Dashboard)"],
+        "Status": ["Ativo", "Ativo", "Pendente"]
+    })
+    
+    st.dataframe(dados_usuarios, use_container_width=True)
+    st.button("➕ Adicionar Novo Usuário")
+
+# =====================================================================
+# MÓDULO 8: CONFIGURAÇÕES
+# =====================================================================
+elif menu == "⚙️ Configurações":
+    st.markdown("### Configurações Globais do Sistema")
+    
+    st.markdown("#### 🎨 Identidade Visual")
+    logo_upload = st.file_uploader("Substituir a Logo do Sistema (PNG ou JPG)", type=["png", "jpg", "jpeg"])
+    if logo_upload is not None:
+        st.session_state.logo_empresa = logo_upload
+        st.success("Logo atualizada! Ela aparecerá no topo do menu lateral.")
+        
+    st.markdown("---")
+    st.markdown("#### ☁️ Conexão de Banco de Dados (Supabase)")
+    supabase_url = st.text_input("Supabase URL", type="password")
+    supabase_key = st.text_input("Supabase Key", type="password")
+    
+    if st.button("Testar Conexão Supabase"):
+        if supabase_url and supabase_key:
+            st.success("Conectado ao Supabase com sucesso!")
+        else:
+            st.error("Por favor, preencha a URL e a Key.")
