@@ -6,29 +6,12 @@ from pptx.util import Inches, Pt
 import io
 from datetime import datetime
 
-# Se você já tiver a biblioteca do Supabase instalada, descomente a linha abaixo:
-# from supabase import create_client, Client
-
 # --- CONFIGURAÇÕES DA PÁGINA ---
 st.set_page_config(
     page_title="Ecoa: Plataforma de Escuta Organizacional",
     page_icon="🌱",
     layout="wide"
 )
-
-# --- FUNÇÕES DE CONEXÃO COM O SUPABASE ---
-@st.cache_resource
-def init_connection(url, key):
-    # try:
-    #     return create_client(url, key)
-    # except Exception as e:
-    #     st.error(f"Erro ao conectar ao Supabase: {e}")
-    #     return None
-    
-    # NOTA PARA A CRIS: Como estamos em um ambiente simulado aqui, deixei a 
-    # chamada do Supabase comentada para o app não quebrar se você rodar sem a chave.
-    # Quando for rodar na vida real, descomente as linhas acima e apague o "pass".
-    pass
 
 # --- INICIALIZAÇÃO DE DADOS MOCKADOS (CASO O SUPABASE NÃO ESTEJA CONECTADO) ---
 if 'dados_locais' not in st.session_state:
@@ -37,13 +20,20 @@ if 'dados_locais' not in st.session_state:
 # --- BARRA LATERAL (CONFIGURAÇÕES DO SISTEMA) ---
 with st.sidebar:
     st.title("⚙️ Configurações (RH)")
+    
+    st.markdown("### 🎨 Personalização")
+    st.write("Deixe a plataforma com a cara da sua empresa.")
+    # NOVO: Botão para o RH subir a logo da empresa
+    logo_empresa = st.file_uploader("Suba a Logo (PNG ou JPG)", type=["png", "jpg", "jpeg"])
+    
+    st.markdown("---")
+    st.markdown("### ☁️ Banco de Dados")
     st.write("Conecte seu banco de dados Supabase aqui.")
     supabase_url = st.text_input("Supabase URL", type="password")
     supabase_key = st.text_input("Supabase Key", type="password")
     
     if supabase_url and supabase_key:
         st.success("Conectado ao Supabase!")
-        # db = init_connection(supabase_url, supabase_key)
     else:
         st.info("Rodando em modo Local/Teste. Insira as credenciais para nuvem.")
 
@@ -51,11 +41,14 @@ with st.sidebar:
     st.caption("Desenvolvido com 💙 por Cris Lima")
 
 # --- CABEÇALHO ---
-col_logo, col_titulo = st.columns([1, 8]) # Cria duas colunas: uma estreita e uma larga
+col_logo, col_titulo = st.columns([1, 8])
 
 with col_logo:
-    # Insere a imagem. Certifique-se de que o ficheiro se chama "logo.png"
-    st.image("logo.png", width=80) 
+    # NOVO: Lógica para mostrar a logo enviada ou um ícone padrão
+    if logo_empresa is not None:
+        st.image(logo_empresa, width=80)
+    else:
+        st.markdown("## 🌱") # Ícone exibido se nenhuma logo for enviada
 
 with col_titulo:
     st.title("Ecoa: Plataforma de Escuta Organizacional")
@@ -100,9 +93,6 @@ with tab1:
                 "enps": enps
             }
             
-            # Se o Supabase estivesse ativo, o código seria:
-            # db.table("respostas").insert(nova_resposta).execute()
-            
             # Como fallback local:
             st.session_state.dados_locais = pd.concat([st.session_state.dados_locais, pd.DataFrame([nova_resposta])], ignore_index=True)
             
@@ -114,7 +104,6 @@ with tab1:
 with tab2:
     st.markdown("### 📊 Análise de Dados em Tempo Real")
     
-    # Simula a busca no Supabase ou pega local
     df = st.session_state.dados_locais
     
     if df.empty:
@@ -122,12 +111,10 @@ with tab2:
     else:
         colA, colB, colC = st.columns(3)
         
-        # Cálculos de médias
         media_lid = df["lideranca"].mean()
         media_com = df["comunicacao"].mean()
         media_rec = df["reconhecimento"].mean()
         
-        # Cálculo básico de eNPS (% Promotores - % Detratores)
         promotores = len(df[df["enps"] >= 9])
         detratores = len(df[df["enps"] <= 6])
         total = len(df)
@@ -140,10 +127,8 @@ with tab2:
         st.markdown("---")
         st.markdown("#### Médias por Departamento")
         
-        # Agrupamento de dados usando Pandas (sua habilidade de ADS brilhando aqui!)
         df_agrupado = df.groupby("departamento")[["lideranca", "comunicacao", "reconhecimento"]].mean().reset_index()
         
-        # Gráfico Plotly
         fig = px.bar(df_agrupado, x="departamento", y=["lideranca", "comunicacao", "reconhecimento"],
                      barmode="group", title="Visão Comparativa de Pilares por Setor",
                      labels={"value": "Média", "variable": "Pilar"},
@@ -165,14 +150,12 @@ with tab3:
         def gerar_pptx(dataframe):
             prs = Presentation()
             
-            # Slide de Título
             slide_titulo = prs.slides.add_slide(prs.slide_layouts[0])
             title = slide_titulo.shapes.title
             subtitle = slide_titulo.placeholders[1]
             title.text = "Resultados: Pesquisa Ecoa"
             subtitle.text = f"Plataforma de Escuta Organizacional - {datetime.now().strftime('%d/%m/%Y')}"
             
-            # Slide de Resumo
             slide_resumo = prs.slides.add_slide(prs.slide_layouts[1])
             title2 = slide_resumo.shapes.title
             title2.text = "Média Geral dos Pilares Avaliados"
@@ -187,7 +170,6 @@ with tab3:
             p = tf.add_paragraph()
             p.text = f"• Reconhecimento: {dataframe['reconhecimento'].mean():.2f} / 5.0"
             
-            # Salva em memória para o Streamlit baixar
             binary_output = io.BytesIO()
             prs.save(binary_output)
             binary_output.seek(0)
