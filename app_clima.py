@@ -4,7 +4,8 @@ import plotly.express as px
 from pptx import Presentation
 from pptx.util import Inches, Pt
 import io
-from datetime import datetime
+from datetime import datetime, timedelta
+from supabase import create_client, Client # NOVO: Importação do Supabase
 
 # --- CONFIGURAÇÕES DA PÁGINA ---
 st.set_page_config(
@@ -12,6 +13,19 @@ st.set_page_config(
     page_icon="🌱",
     layout="wide"
 )
+
+# --- CONEXÃO AUTOMÁTICA COM O SUPABASE (SECRETS) ---
+@st.cache_resource
+def init_connection():
+    try:
+        # O sistema vai buscar as chaves no cofre seguro do Streamlit
+        url = st.secrets["SUPABASE_URL"]
+        key = st.secrets["SUPABASE_KEY"]
+        return create_client(url, key)
+    except Exception:
+        return None # Se não achar as chaves, não quebra o sistema
+
+supabase = init_connection()
 
 # --- INICIALIZAÇÃO DE DADOS E ESTADOS (MEMÓRIA DO SISTEMA) ---
 if 'dados_locais' not in st.session_state:
@@ -31,10 +45,16 @@ if 'perguntas' not in st.session_state:
     })
 
 if 'mensagem_padrao' not in st.session_state:
-    st.session_state.mensagem_padrao = "Olá, {nome}! Sua voz é fundamental para construirmos um ambiente cada vez melhor. Reserve 2 minutinhos para nos contar como você se sente. É 100% seguro e anônimo.\nAcesse: {link_pesquisa}"
+    st.session_state.mensagem_padrao = "Olá, {nome}! Sua voz é fundamental para construirmos um ambiente cada vez melhor. Reserve 2 minutinhos para nos contar como você se sente até o dia {data_validade}. É 100% seguro e anônimo.\nAcesse: {link_pesquisa}"
 
 if 'logo_empresa' not in st.session_state:
     st.session_state.logo_empresa = None
+
+if 'empresa_atual' not in st.session_state:
+    st.session_state.empresa_atual = "Sua Empresa"
+
+if 'data_validade' not in st.session_state:
+    st.session_state.data_validade = datetime.today().date() + timedelta(days=15)
 
 # --- MENU LATERAL DE NAVEGAÇÃO ---
 with st.sidebar:
@@ -79,7 +99,7 @@ if menu == "🏢 Empresa":
     
     col1, col2 = st.columns(2)
     with col1:
-        st.text_input("Nome Fantasia da Empresa", "Pessin Gestão (Exemplo)")
+        nome_empresa_input = st.text_input("Nome Fantasia da Empresa", st.session_state.empresa_atual)
         st.text_input("CNPJ", "00.000.000/0001-00")
     with col2:
         st.selectbox("Porte da Empresa", ["Micro (até 9 func.)", "Pequena (10 a 49)", "Média (50 a 99)", "Grande (+100)"])
@@ -88,7 +108,10 @@ if menu == "🏢 Empresa":
     st.markdown("#### Estrutura de Departamentos")
     st.write("Adicione os departamentos que aparecerão para o colaborador selecionar:")
     st.text_area("Departamentos (um por linha)", "Administrativo\nVendas\nLogística\nTecnologia\nAtendimento", height=120)
-    st.button("Salvar Dados da Empresa", type="primary")
+    
+    if st.button("Salvar Dados da Empresa", type="primary"):
+        st.session_state.empresa_atual = nome_empresa_input
+        st.success(f"Dados salvos! A pesquisa atual está configurada para: **{st.session_state.empresa_atual}**")
 
 # =====================================================================
 # MÓDULO 2: FORMULÁRIO DA PESQUISA
@@ -123,7 +146,7 @@ elif menu == "📝 Formulário da Pesquisa":
 elif menu == "✉️ Mensagem Automática":
     st.markdown("### Comunicação Humanizada")
     st.write("Personalize o texto de convite que será disparado via e-mail ou WhatsApp junto com o link da pesquisa.")
-    st.info("Dica: Use `{nome}` para o sistema inserir o nome do colaborador e `{link_pesquisa}` para inserir o link único.")
+    st.info("Dicas de variáveis: Use `{nome}`, `{data_validade}` e `{link_pesquisa}`. O sistema as substituirá automaticamente.")
     
     msg_atual = st.text_area("Corpo da Mensagem", st.session_state.mensagem_padrao, height=150)
     if st.button("Salvar Modelo de Mensagem", type="primary"):
@@ -131,7 +154,12 @@ elif menu == "✉️ Mensagem Automática":
         st.success("Mensagem padrão atualizada com sucesso!")
         
     st.markdown("#### Pré-visualização do envio para o João:")
-    st.code(msg_atual.replace("{nome}", "João").replace("{link_pesquisa}", "https://ecoa.app/pesquisa/xyz987"))
+    data_formatada_preview = st.session_state.data_validade.strftime('%d/%m/%Y')
+    empresa_slug_preview = st.session_state.empresa_atual.replace(" ", "").lower()
+    link_preview = f"https://ecoa.app/{empresa_slug_preview}/xyz987"
+    
+    texto_preview = msg_atual.replace("{nome}", "João").replace("{link_pesquisa}", link_preview).replace("{data_validade}", data_formatada_preview)
+    st.code(texto_preview)
 
 # =====================================================================
 # MÓDULO 4: GERENCIAMENTO DE LINKS
@@ -140,17 +168,34 @@ elif menu == "🔗 Gerenciamento de Links":
     st.markdown("### Controle de Acessos e Disparos")
     st.write("Gere links únicos para mapeamento seguro de respondentes ou um link geral para equipes operacionais.")
     
+    # Configuração de Validade e Empresa
+    st.markdown("#### ⚙️ Parâmetros da Campanha")
+    col_param1, col_param2 = st.columns(2)
+    with col_param1:
+        st.info(f"**Empresa Atual:** {st.session_state.empresa_atual}\n\n*(Altere no módulo 'Empresa' se necessário)*")
+    with col_param2:
+        nova_validade = st.date_input("Data de Encerramento (Validade dos Links):", st.session_state.data_validade)
+        st.session_state.data_validade = nova_validade
+    
+    st.markdown("---")
+    
+    # Geração dinâmica do link (Baseado no nome da empresa e data)
+    empresa_slug = st.session_state.empresa_atual.replace(" ", "").lower()
+    data_formatada = st.session_state.data_validade.strftime('%Y%m%d')
+    link_geral = f"https://ecoa.app/pesquisa?empresa={empresa_slug}&validade={data_formatada}"
+    
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("#### 📧 Envio em Lote (Link Único)")
-        st.write("Faça upload de uma planilha com Nome e E-mail. O sistema criará links não-compartilháveis para cada pessoa.")
+        st.write("Faça upload de uma planilha com Nome e E-mail. O sistema criará links não-compartilháveis com validade atrelada.")
         st.file_uploader("Planilha de Colaboradores (.csv ou .xlsx)", type=["csv", "xlsx"])
-        st.button("Processar e Gerar Disparos")
+        if st.button("Processar e Gerar Disparos"):
+            st.success(f"Disparos simulados para {st.session_state.empresa_atual}! Os links expiram em {nova_validade.strftime('%d/%m/%Y')}.")
         
     with col2:
         st.markdown("#### 🌐 Link Geral da Campanha")
         st.write("Para murais, totens de RH ou grupos de WhatsApp. O IP será rastreado para evitar dupla resposta.")
-        st.code("https://ecoa-escuta.streamlit.app/?campanha=Q1_2026", language="html")
+        st.code(link_geral, language="html")
         st.button("Copiar Link Geral")
 
 # =====================================================================
@@ -199,7 +244,7 @@ elif menu == "📑 Relatórios":
             prs = Presentation()
             slide_titulo = prs.slides.add_slide(prs.slide_layouts[0])
             slide_titulo.shapes.title.text = "Resultados: Pesquisa Ecoa"
-            slide_titulo.placeholders[1].text = f"Plataforma de Escuta Organizacional - {datetime.now().strftime('%d/%m/%Y')}"
+            slide_titulo.placeholders[1].text = f"Empresa: {st.session_state.empresa_atual} - {datetime.now().strftime('%d/%m/%Y')}"
             
             slide_resumo = prs.slides.add_slide(prs.slide_layouts[1])
             slide_resumo.shapes.title.text = "Média Geral dos Pilares Avaliados"
@@ -219,7 +264,7 @@ elif menu == "📑 Relatórios":
         st.info("Clique no botão abaixo para baixar sua apresentação `.pptx` compilada automaticamente.")
         if st.button("Preparar Arquivo PowerPoint", type="primary"):
             arquivo_pptx = gerar_pptx(df_relatorio)
-            st.download_button("📥 Baixar Apresentação (.pptx)", data=arquivo_pptx, file_name="Relatorio_Ecoa.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
+            st.download_button("📥 Baixar Apresentação (.pptx)", data=arquivo_pptx, file_name=f"Relatorio_Ecoa_{st.session_state.empresa_atual.replace(' ', '')}.pptx", mime="application/vnd.openxmlformats-officedocument.presentationml.presentation")
 
 # =====================================================================
 # MÓDULO 7: CLIENTES (USUÁRIOS)
@@ -251,12 +296,10 @@ elif menu == "⚙️ Configurações":
         st.success("Logo atualizada! Ela aparecerá no topo do menu lateral.")
         
     st.markdown("---")
-    st.markdown("#### ☁️ Conexão de Banco de Dados (Supabase)")
-    supabase_url = st.text_input("Supabase URL", type="password")
-    supabase_key = st.text_input("Supabase Key", type="password")
+    st.markdown("#### ☁️ Status do Banco de Dados")
     
-    if st.button("Testar Conexão Supabase"):
-        if supabase_url and supabase_key:
-            st.success("Conectado ao Supabase com sucesso!")
-        else:
-            st.error("Por favor, preencha a URL e a Key.")
+    # O sistema agora apenas verifica se conectou automaticamente
+    if supabase is not None:
+        st.success("✅ Supabase conectado automaticamente e operando com segurança máxima!")
+    else:
+        st.warning("⚠️ Supabase não conectado. Configure as variáveis em 'Secrets' no painel do Streamlit Cloud.")
